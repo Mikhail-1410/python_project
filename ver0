@@ -1,0 +1,63 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
+
+# Параметры двойного маятника
+g = 9.81  # ускорение свободного падения
+L1 = 1.0  # длина первого маятника
+L2 = 1.0  # длина второго маятника
+m1 = 1.0  # масса первого маятника
+m2 = 1.0  # масса второго маятника
+
+# Начальные условия
+theta1 = np.pi / 2  # начальный угол первого маятника
+theta2 = np.pi / 2  # начальный угол второго маятника
+p1 = 0.0  # начальный момент импульса первого маятника
+p2 = 0.0  # начальный момент импульса второго маятника
+
+# Временные параметры
+dt = 0.01  # шаг времени
+T = 20    # общее время симуляции
+N = int(T / dt)  # количество шагов времени
+
+# Функция для расчета производных
+def derivatives(state, t):
+    theta1, theta2, p1, p2 = state
+    delta = theta2 - theta1
+
+    den1 = (m1 + m2) * L1 - m2 * L1 * np.cos(delta) * np.cos(delta)
+    den2 = (L2 / L1) * den1
+
+    dot_theta1 = p1 / (m1 + m2) / L1**2
+    dot_theta2 = p2 / m2 / L2**2
+    dot_p1 = -(m1 + m2) * g * L1 * np.sin(theta1) - m2 * L1 * np.cos(delta) * L2 * dot_theta2**2 * np.sin(delta) - m2 * L1 * np.cos(delta) * g * np.sin(theta2)
+    dot_p2 = m2 * L2 * g * np.sin(theta2) + m2 * L2 * np.cos(delta) * L1 * dot_theta1**2 * np.sin(delta) - m2 * L2 * np.cos(delta) * g * np.sin(theta1)
+
+    return [dot_theta1, dot_theta2, dot_p1, dot_p2]
+# Интегрирование уравнений движения
+state = [theta1, theta2, p1, p2]
+states = np.zeros((N, 4))
+for i in range(N - 1):
+    state = state + np.array(derivatives(state, i*dt)) * dt
+    states[i+1] = state
+
+# Расчет координат маятников
+x1 = L1 * np.sin(states[:, 0])
+y1 = -L1 * np.cos(states[:, 0])
+x2 = x1 + L2 * np.sin(states[:, 1])
+y2 = y1 - L2 * np.cos(states[:, 1])
+
+# Визуализация
+fig, ax = plt.subplots()
+ax.set_xlim(-2.2, 2.2)
+ax.set_ylim(-2.2, 2.2)
+line, = ax.plot([], [], 'o-', lw=2)
+trace, = ax.plot([], [], '.-', lw=1, alpha=0.3)
+
+def animate(i):
+    line.set_data([0, x1[i], x2[i]], [0, y1[i], y2[i]])
+    trace.set_data(x2[:i+1], y2[:i+1])
+    return line, trace
+
+ani = FuncAnimation(fig, animate, frames=N, interval=dt*1000, blit=True)
+plt.show()
